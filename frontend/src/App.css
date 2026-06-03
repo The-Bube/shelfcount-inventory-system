@@ -1,0 +1,76 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #f4f6f8;
+  color: #17202a;
+  font-family:
+    Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.hero-card {
+  width: min(900px, 100%);
+  padding: 3rem;
+  border-radius: 24px;
+  background: white;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  max-width: 700px;
+  margin: 0;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 1;
+}
+
+.description {
+  max-width: 680px;
+  margin: 1.5rem 0 2rem;
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: #52616b;
+}
+
+.status-card {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.25rem;
+  border: 1px solid #dbe4ee;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.status-online {
+  background: #16a34a;
+}
+
+.status-offline {
+  background: #dc2626;
+}
+
+.status-card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.status-card p {
+  margin: 0;
+  color: #52616b;
+}
