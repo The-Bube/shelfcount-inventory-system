@@ -1,7 +1,9 @@
 package com.shelfcount.backend.config;
 
 import com.shelfcount.backend.model.Item;
+import com.shelfcount.backend.model.Location;
 import com.shelfcount.backend.repository.ItemRepository;
+import com.shelfcount.backend.repository.LocationRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +12,10 @@ import org.springframework.context.annotation.Configuration;
 public class DataLoader {
 
     @Bean
-    CommandLineRunner loadSampleItems(ItemRepository itemRepository) {
+    CommandLineRunner loadSampleData(
+            ItemRepository itemRepository,
+            LocationRepository locationRepository
+    ) {
         return args -> {
             if (itemRepository.count() == 0) {
                 itemRepository.save(new Item(
@@ -52,6 +57,13 @@ public class DataLoader {
                         "Textbook",
                         5
                 ));
+            }
+
+            if (locationRepository.count() == 0) {
+                locationRepository.save(new Location("Main Store Shelf"));
+                locationRepository.save(new Location("Back Storage Room"));
+                locationRepository.save(new Location("Display Table"));
+                locationRepository.save(new Location("Receiving Area"));
             }
         };
     }
