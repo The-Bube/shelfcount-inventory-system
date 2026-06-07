@@ -40,21 +40,25 @@ public class CountEntryController {
     @PostMapping("/api/count-entries")
     public CountEntry createCountEntry(@Valid @RequestBody CreateCountEntryRequest request) {
         Item item = itemRepository.findById(request.getItemId())
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+            .orElseThrow(() -> new RuntimeException("Item not found"));
 
         Location location = locationRepository.findById(request.getLocationId())
-                .orElseThrow(() -> new RuntimeException("Location not found"));
+            .orElseThrow(() -> new RuntimeException("Location not found"));
 
-        CountEntry countEntry = new CountEntry(
-                item,
-                location,
-                request.getQuantityFound(),
-                LocalDateTime.now()
-        );
+        CountEntry countEntry = countEntryRepository
+            .findByItemIdAndLocationId(item.getId(), location.getId())
+            .orElseGet(() -> new CountEntry(
+                    item,
+                    location,
+                    0,
+                    LocalDateTime.now()
+            ));
+
+        countEntry.setQuantityFound(request.getQuantityFound());
+        countEntry.setCountedAt(LocalDateTime.now());
 
         return countEntryRepository.save(countEntry);
     }
-
     @GetMapping("/api/items/{itemId}/count-entries")
     public List<CountEntry> getCountEntriesForItem(@PathVariable Long itemId) {
         return countEntryRepository.findByItemIdOrderByCountedAtDesc(itemId);
