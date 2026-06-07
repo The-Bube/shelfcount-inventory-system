@@ -278,3 +278,50 @@ h1 {
   border-radius: 12px;
   background: white;
 }
+
+.dashboard-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #dbe4ee;
+}
+
+.dashboard-section h2 {
+  margin: 0 0 1rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-card {
+  padding: 1rem;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.dashboard-card span {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.dashboard-card strong {
+  font-size: 1.75rem;
+  color: #0f172a;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

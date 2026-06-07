@@ -39,6 +39,14 @@ type CountSummary = {
   status: string;
 };
 
+type DashboardSummary = {
+  totalItems: number;
+  matchedItems: number;
+  shortItems: number;
+  overItems: number;
+  notCountedItems: number;
+};
+
 function App() {
   const [backendStatus, setBackendStatus] =
     useState<string>("Checking...");
@@ -56,17 +64,39 @@ function App() {
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
   const [selectedLocationId, setSelectedLocationId] =
     useState<string>("");
 
   const [quantityFound, setQuantityFound] = useState<string>("");
   const [countEntries, setCountEntries] = useState<CountEntry[]>([]);
+
   const [countSummary, setCountSummary] =
     useState<CountSummary | null>(null);
+
+  const [dashboardSummary, setDashboardSummary] =
+    useState<DashboardSummary | null>(null);
 
   const [countMessage, setCountMessage] = useState<string>(
     "Select an item to begin recording counts."
   );
+
+  function loadDashboardSummary() {
+    fetch("http://localhost:8080/api/dashboard/summary")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load dashboard summary.");
+        }
+
+        return response.json() as Promise<DashboardSummary>;
+      })
+      .then((data) => {
+        setDashboardSummary(data);
+      })
+      .catch(() => {
+        setDashboardSummary(null);
+      });
+  }
 
   useEffect(() => {
     fetch("http://localhost:8080/api/health")
@@ -102,6 +132,8 @@ function App() {
       .catch(() => {
         setCountMessage("Unable to load store locations.");
       });
+
+    loadDashboardSummary();
   }, []);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -235,10 +267,14 @@ function App() {
         return response.json() as Promise<CountEntry>;
       })
       .then(() => {
+        const currentItem = selectedItem;
+
         setQuantityFound("");
         setSelectedLocationId("");
         setCountMessage("Count saved successfully.");
-        loadItemCountData(selectedItem);
+
+        loadItemCountData(currentItem);
+        loadDashboardSummary();
       })
       .catch(() => {
         setCountMessage("Unable to save the count.");
@@ -272,6 +308,39 @@ function App() {
             <p>{backendMessage}</p>
           </div>
         </div>
+
+        {dashboardSummary && (
+          <section className="dashboard-section">
+            <h2>Inventory Dashboard</h2>
+
+            <div className="dashboard-grid">
+              <article className="dashboard-card">
+                <span>Total Items</span>
+                <strong>{dashboardSummary.totalItems}</strong>
+              </article>
+
+              <article className="dashboard-card">
+                <span>Matched</span>
+                <strong>{dashboardSummary.matchedItems}</strong>
+              </article>
+
+              <article className="dashboard-card">
+                <span>Short</span>
+                <strong>{dashboardSummary.shortItems}</strong>
+              </article>
+
+              <article className="dashboard-card">
+                <span>Over</span>
+                <strong>{dashboardSummary.overItems}</strong>
+              </article>
+
+              <article className="dashboard-card">
+                <span>Not Counted</span>
+                <strong>{dashboardSummary.notCountedItems}</strong>
+              </article>
+            </div>
+          </section>
+        )}
 
         <section className="search-section">
           <h2>Search Inventory</h2>
