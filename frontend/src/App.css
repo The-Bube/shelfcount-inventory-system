@@ -179,3 +179,102 @@ h1 {
     width: 100%;
   }
 }
+
+.item-card button {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: #0f172a;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.item-card button:hover {
+  background: #1e293b;
+}
+
+.count-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #dbe4ee;
+}
+
+.count-section h2 {
+  margin: 0 0 1rem;
+}
+
+.count-section > h3 {
+  margin-bottom: 0.5rem;
+}
+
+.count-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.count-form label {
+  display: grid;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+
+.count-form select,
+.count-form input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: white;
+  font-size: 1rem;
+}
+
+.count-form select:focus,
+.count-form input:focus {
+  outline: 3px solid rgba(37, 99, 235, 0.18);
+  border-color: #2563eb;
+}
+
+.count-form button {
+  padding: 0.9rem 1.25rem;
+  border: none;
+  border-radius: 12px;
+  background: #16a34a;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.count-form button:hover {
+  background: #15803d;
+}
+
+.count-summary {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid #dbe4ee;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.count-summary h3 {
+  margin-top: 0;
+}
+
+.count-summary p {
+  margin: 0.5rem 0;
+}
+
+.count-entries {
+  margin-top: 1.5rem;
+}
+
+.count-entries > div {
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+}

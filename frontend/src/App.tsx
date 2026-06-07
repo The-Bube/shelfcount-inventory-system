@@ -16,16 +16,56 @@ type Item = {
   expectedQuantity: number;
 };
 
+type Location = {
+  id: number;
+  name: string;
+};
+
+type CountEntry = {
+  id: number;
+  item: Item;
+  location: Location;
+  quantityFound: number;
+  countedAt: string;
+};
+
+type CountSummary = {
+  itemId: number;
+  serialNumber: string;
+  itemName: string;
+  expectedQuantity: number;
+  totalFound: number;
+  variance: number;
+  status: string;
+};
+
 function App() {
-  const [backendStatus, setBackendStatus] = useState<string>("Checking...");
+  const [backendStatus, setBackendStatus] =
+    useState<string>("Checking...");
+
   const [backendMessage, setBackendMessage] = useState<string>(
     "Trying to connect to the backend."
   );
 
   const [query, setQuery] = useState<string>("");
   const [items, setItems] = useState<Item[]>([]);
+
   const [searchMessage, setSearchMessage] = useState<string>(
     "Search by serial number, barcode, item name, or category."
+  );
+
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedLocationId, setSelectedLocationId] =
+    useState<string>("");
+
+  const [quantityFound, setQuantityFound] = useState<string>("");
+  const [countEntries, setCountEntries] = useState<CountEntry[]>([]);
+  const [countSummary, setCountSummary] =
+    useState<CountSummary | null>(null);
+
+  const [countMessage, setCountMessage] = useState<string>(
+    "Select an item to begin recording counts."
   );
 
   useEffect(() => {
@@ -47,6 +87,21 @@ function App() {
           "Frontend is running, but the backend is not currently reachable."
         );
       });
+
+    fetch("http://localhost:8080/api/locations")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load locations.");
+        }
+
+        return response.json() as Promise<Location[]>;
+      })
+      .then((data) => {
+        setLocations(data);
+      })
+      .catch(() => {
+        setCountMessage("Unable to load store locations.");
+      });
   }, []);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -56,7 +111,10 @@ function App() {
 
     if (!trimmedQuery) {
       setItems([]);
-      setSearchMessage("Enter a serial number, barcode, item name, or category.");
+      setSelectedItem(null);
+      setSearchMessage(
+        "Enter a serial number, barcode, item name, or category."
+      );
       return;
     }
 
@@ -76,6 +134,9 @@ function App() {
       })
       .then((data) => {
         setItems(data);
+        setSelectedItem(null);
+        setCountEntries([]);
+        setCountSummary(null);
 
         if (data.length === 0) {
           setSearchMessage("No matching inventory items found.");
@@ -85,7 +146,102 @@ function App() {
       })
       .catch(() => {
         setItems([]);
-        setSearchMessage("Unable to search inventory. Check that the backend is running.");
+        setSearchMessage(
+          "Unable to search inventory. Check that the backend is running."
+        );
+      });
+  }
+
+  function loadItemCountData(item: Item) {
+    setSelectedItem(item);
+    setSelectedLocationId("");
+    setQuantityFound("");
+    setCountMessage(`Recording counts for ${item.name}.`);
+
+    fetch(`http://localhost:8080/api/items/${item.id}/count-entries`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load count entries.");
+        }
+
+        return response.json() as Promise<CountEntry[]>;
+      })
+      .then((data) => {
+        setCountEntries(data);
+      })
+      .catch(() => {
+        setCountEntries([]);
+      });
+
+    fetch(`http://localhost:8080/api/items/${item.id}/count-summary`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load count summary.");
+        }
+
+        return response.json() as Promise<CountSummary>;
+      })
+      .then((data) => {
+        setCountSummary(data);
+      })
+      .catch(() => {
+        setCountSummary(null);
+      });
+  }
+
+  function handleCountSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedItem) {
+      setCountMessage("Select an inventory item first.");
+      return;
+    }
+
+    if (!selectedLocationId) {
+      setCountMessage("Select a store location.");
+      return;
+    }
+
+    const parsedQuantity = Number(quantityFound);
+
+    if (
+      quantityFound.trim() === "" ||
+      Number.isNaN(parsedQuantity) ||
+      parsedQuantity < 0 ||
+      !Number.isInteger(parsedQuantity)
+    ) {
+      setCountMessage("Enter a valid whole-number quantity.");
+      return;
+    }
+
+    setCountMessage("Saving count...");
+
+    fetch("http://localhost:8080/api/count-entries", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        itemId: selectedItem.id,
+        locationId: Number(selectedLocationId),
+        quantityFound: parsedQuantity,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to save count.");
+        }
+
+        return response.json() as Promise<CountEntry>;
+      })
+      .then(() => {
+        setQuantityFound("");
+        setSelectedLocationId("");
+        setCountMessage("Count saved successfully.");
+        loadItemCountData(selectedItem);
+      })
+      .catch(() => {
+        setCountMessage("Unable to save the count.");
       });
   }
 
@@ -97,8 +253,9 @@ function App() {
         <h1>Bookstore Inventory Counting Made Faster</h1>
 
         <p className="description">
-          Search items by serial number, record physical counts by location, and
-          compare total counted stock against the expected quantity on hand.
+          Search items by serial number, record physical counts by location,
+          and compare total counted stock against the expected quantity on
+          hand.
         </p>
 
         <div className="status-card">
@@ -108,7 +265,7 @@ function App() {
                 ? "status-dot status-online"
                 : "status-dot status-offline"
             }
-          ></span>
+          />
 
           <div>
             <h2>Backend Status: {backendStatus}</h2>
@@ -156,10 +313,104 @@ function App() {
                     <dd>{item.expectedQuantity}</dd>
                   </div>
                 </dl>
+
+                <button
+                  type="button"
+                  onClick={() => loadItemCountData(item)}
+                >
+                  Record Count
+                </button>
               </article>
             ))}
           </div>
         </section>
+
+        {selectedItem && (
+          <section className="count-section">
+            <h2>Record Physical Count</h2>
+
+            <h3>{selectedItem.name}</h3>
+
+            <p>
+              Serial number: <strong>{selectedItem.serialNumber}</strong>
+            </p>
+
+            <form className="count-form" onSubmit={handleCountSubmit}>
+              <label>
+                Location
+                <select
+                  value={selectedLocationId}
+                  onChange={(event) =>
+                    setSelectedLocationId(event.target.value)
+                  }
+                >
+                  <option value="">Select a location</option>
+
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Quantity found
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={quantityFound}
+                  onChange={(event) =>
+                    setQuantityFound(event.target.value)
+                  }
+                />
+              </label>
+
+              <button type="submit">Save Count</button>
+            </form>
+
+            <p>{countMessage}</p>
+
+            {countSummary && (
+              <div className="count-summary">
+                <h3>Count Summary</h3>
+
+                <p>
+                  Expected quantity:{" "}
+                  <strong>{countSummary.expectedQuantity}</strong>
+                </p>
+
+                <p>
+                  Total found: <strong>{countSummary.totalFound}</strong>
+                </p>
+
+                <p>
+                  Variance: <strong>{countSummary.variance}</strong>
+                </p>
+
+                <p>
+                  Status: <strong>{countSummary.status}</strong>
+                </p>
+              </div>
+            )}
+
+            <div className="count-entries">
+              <h3>Counts by Location</h3>
+
+              {countEntries.length === 0 ? (
+                <p>No counts have been recorded for this item.</p>
+              ) : (
+                countEntries.map((entry) => (
+                  <div key={entry.id}>
+                    <strong>{entry.location.name}</strong>:{" "}
+                    {entry.quantityFound}
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
       </section>
     </main>
   );
