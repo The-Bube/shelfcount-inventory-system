@@ -1,5 +1,6 @@
 package com.shelfcount.backend.controller;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import com.shelfcount.backend.dto.CreateCountEntryRequest;
 import com.shelfcount.backend.dto.ItemCountSummary;
 import com.shelfcount.backend.model.CountEntry;
@@ -98,5 +99,9 @@ public class CountEntryController {
                 variance,
                 status
         );
+    }
+    @DeleteMapping("/api/count-entries")
+    public void deleteAllCountEntries() {
+        countEntryRepository.deleteAll();
     }
 }

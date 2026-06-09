@@ -325,3 +325,26 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.dashboard-actions {
+  margin-top: 1.25rem;
+}
+
+.reset-button {
+  padding: 0.85rem 1.1rem;
+  border: none;
+  border-radius: 12px;
+  background: #dc2626;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  background: #b91c1c;
+}
+
+.dashboard-actions p {
+  margin: 0.75rem 0 0;
+  color: #52616b;
+}

@@ -80,6 +80,7 @@ function App() {
   const [countMessage, setCountMessage] = useState<string>(
     "Select an item to begin recording counts."
   );
+  const [resetMessage, setResetMessage] = useState<string>("");
 
   function loadDashboardSummary() {
     fetch("http://localhost:8080/api/dashboard/summary")
@@ -280,6 +281,42 @@ function App() {
         setCountMessage("Unable to save the count.");
       });
   }
+  function handleResetCounts() {
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all saved count entries?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setResetMessage("Clearing count entries...");
+
+    fetch("http://localhost:8080/api/count-entries", {
+      method: "DELETE",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to clear count entries.");
+        }
+
+        setItems([]);
+        setSelectedItem(null);
+        setCountEntries([]);
+        setCountSummary(null);
+        setQuery("");
+        setSearchMessage(
+          "Search by serial number, barcode, item name, or category."
+        );
+        setCountMessage("Select an item to begin recording counts.");
+        setResetMessage("All count entries were cleared successfully.");
+
+        loadDashboardSummary();
+      })
+      .catch(() => {
+        setResetMessage("Unable to clear count entries.");
+      });
+  }
 
   return (
     <main className="app">
@@ -338,6 +375,18 @@ function App() {
                 <span>Not Counted</span>
                 <strong>{dashboardSummary.notCountedItems}</strong>
               </article>
+            </div>
+
+            <div className="dashboard-actions">
+              <button
+                type="button"
+                className="reset-button"
+                onClick={handleResetCounts}
+              >
+                Clear All Count Entries
+              </button>
+
+              {resetMessage && <p>{resetMessage}</p>}
             </div>
           </section>
         )}
