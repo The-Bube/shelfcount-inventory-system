@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 
+const ACTIVE_SESSION_ID = 1;
+
 type HealthResponse = {
   status: string;
   message: string;
@@ -83,7 +85,9 @@ function App() {
   const [resetMessage, setResetMessage] = useState<string>("");
 
   function loadDashboardSummary() {
-    fetch("http://localhost:8080/api/dashboard/summary")
+    fetch(
+  `http://localhost:8080/api/inventory-sessions/${ACTIVE_SESSION_ID}/dashboard/summary`
+)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load dashboard summary.");
@@ -191,7 +195,9 @@ function App() {
     setQuantityFound("");
     setCountMessage(`Recording counts for ${item.name}.`);
 
-    fetch(`http://localhost:8080/api/items/${item.id}/count-entries`)
+    fetch(
+  `http://localhost:8080/api/inventory-sessions/${ACTIVE_SESSION_ID}/items/${item.id}/count-entries`
+)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load count entries.");
@@ -206,7 +212,9 @@ function App() {
         setCountEntries([]);
       });
 
-    fetch(`http://localhost:8080/api/items/${item.id}/count-summary`)
+    fetch(
+  `http://localhost:8080/api/inventory-sessions/${ACTIVE_SESSION_ID}/items/${item.id}/count-summary`
+)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load count summary.");
@@ -255,6 +263,7 @@ function App() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        sessionId: ACTIVE_SESSION_ID,
         itemId: selectedItem.id,
         locationId: Number(selectedLocationId),
         quantityFound: parsedQuantity,
