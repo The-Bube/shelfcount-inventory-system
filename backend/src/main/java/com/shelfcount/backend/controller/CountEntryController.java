@@ -1,16 +1,18 @@
 package com.shelfcount.backend.controller;
 
-import org.springframework.web.bind.annotation.DeleteMapping;
 import com.shelfcount.backend.dto.CreateCountEntryRequest;
 import com.shelfcount.backend.dto.ItemCountSummary;
 import com.shelfcount.backend.model.CountEntry;
+import com.shelfcount.backend.model.InventorySession;
 import com.shelfcount.backend.model.Item;
 import com.shelfcount.backend.model.Location;
 import com.shelfcount.backend.repository.CountEntryRepository;
+import com.shelfcount.backend.repository.InventorySessionRepository;
 import com.shelfcount.backend.repository.ItemRepository;
 import com.shelfcount.backend.repository.LocationRepository;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,50 +29,76 @@ public class CountEntryController {
     private final CountEntryRepository countEntryRepository;
     private final ItemRepository itemRepository;
     private final LocationRepository locationRepository;
+    private final InventorySessionRepository inventorySessionRepository;
 
     public CountEntryController(
             CountEntryRepository countEntryRepository,
             ItemRepository itemRepository,
-            LocationRepository locationRepository
+            LocationRepository locationRepository,
+            InventorySessionRepository inventorySessionRepository
     ) {
         this.countEntryRepository = countEntryRepository;
         this.itemRepository = itemRepository;
         this.locationRepository = locationRepository;
+        this.inventorySessionRepository = inventorySessionRepository;
     }
 
     @PostMapping("/api/count-entries")
     public CountEntry createCountEntry(@Valid @RequestBody CreateCountEntryRequest request) {
+        InventorySession session = inventorySessionRepository.findById(request.getSessionId())
+                .orElseThrow(() -> new RuntimeException("Inventory session not found"));
+
         Item item = itemRepository.findById(request.getItemId())
-            .orElseThrow(() -> new RuntimeException("Item not found"));
+                .orElseThrow(() -> new RuntimeException("Item not found"));
 
         Location location = locationRepository.findById(request.getLocationId())
-            .orElseThrow(() -> new RuntimeException("Location not found"));
+                .orElseThrow(() -> new RuntimeException("Location not found"));
 
         CountEntry countEntry = countEntryRepository
-            .findByItemIdAndLocationId(item.getId(), location.getId())
-            .orElseGet(() -> new CountEntry(
-                    item,
-                    location,
-                    0,
-                    LocalDateTime.now()
-            ));
+                .findByInventorySessionIdAndItemIdAndLocationId(
+                        session.getId(),
+                        item.getId(),
+                        location.getId()
+                )
+                .orElseGet(() -> new CountEntry(
+                        session,
+                        item,
+                        location,
+                        0,
+                        LocalDateTime.now()
+                ));
 
         countEntry.setQuantityFound(request.getQuantityFound());
         countEntry.setCountedAt(LocalDateTime.now());
 
         return countEntryRepository.save(countEntry);
     }
-    @GetMapping("/api/items/{itemId}/count-entries")
-    public List<CountEntry> getCountEntriesForItem(@PathVariable Long itemId) {
-        return countEntryRepository.findByItemIdOrderByCountedAtDesc(itemId);
+
+    @GetMapping("/api/inventory-sessions/{sessionId}/items/{itemId}/count-entries")
+    public List<CountEntry> getCountEntriesForItem(
+            @PathVariable Long sessionId,
+            @PathVariable Long itemId
+    ) {
+        return countEntryRepository
+                .findByInventorySessionIdAndItemIdOrderByCountedAtDesc(
+                        sessionId,
+                        itemId
+                );
     }
 
-    @GetMapping("/api/items/{itemId}/count-summary")
-    public ItemCountSummary getCountSummaryForItem(@PathVariable Long itemId) {
+    @GetMapping("/api/inventory-sessions/{sessionId}/items/{itemId}/count-summary")
+    public ItemCountSummary getCountSummaryForItem(
+            @PathVariable Long sessionId,
+            @PathVariable Long itemId
+    ) {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Item not found"));
 
-        List<CountEntry> countEntries = countEntryRepository.findByItemIdOrderByCountedAtDesc(itemId);
+        List<CountEntry> countEntries = countEntryRepository
+                .findByInventorySessionIdAndItemIdOrderByCountedAtDesc(
+                        sessionId,
+                        itemId
+                );
 
         int totalFound = countEntries.stream()
                 .mapToInt(CountEntry::getQuantityFound)
@@ -80,7 +108,7 @@ public class CountEntryController {
 
         String status;
 
-        if (totalFound == 0) {
+        if (countEntries.isEmpty()) {
             status = "Not Counted";
         } else if (variance == 0) {
             status = "Matched";
@@ -100,6 +128,7 @@ public class CountEntryController {
                 status
         );
     }
+
     @DeleteMapping("/api/count-entries")
     public void deleteAllCountEntries() {
         countEntryRepository.deleteAll();

@@ -8,7 +8,16 @@ import java.util.Optional;
 
 public interface CountEntryRepository extends JpaRepository<CountEntry, Long> {
 
-    List<CountEntry> findByItemIdOrderByCountedAtDesc(Long itemId);
+    List<CountEntry> findByInventorySessionIdAndItemIdOrderByCountedAtDesc(
+            Long inventorySessionId,
+            Long itemId
+    );
 
-    Optional<CountEntry> findByItemIdAndLocationId(Long itemId, Long locationId);
+    Optional<CountEntry> findByInventorySessionIdAndItemIdAndLocationId(
+            Long inventorySessionId,
+            Long itemId,
+            Long locationId
+    );
+
+    void deleteByInventorySessionId(Long inventorySessionId);
 }

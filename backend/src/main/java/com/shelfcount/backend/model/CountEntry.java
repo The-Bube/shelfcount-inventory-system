@@ -22,6 +22,10 @@ public class CountEntry {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "inventory_session_id", nullable = false)
+    private InventorySession inventorySession;
+
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
@@ -40,11 +44,13 @@ public class CountEntry {
     }
 
     public CountEntry(
+            InventorySession inventorySession,
             Item item,
             Location location,
             Integer quantityFound,
             LocalDateTime countedAt
     ) {
+        this.inventorySession = inventorySession;
         this.item = item;
         this.location = location;
         this.quantityFound = quantityFound;
@@ -53,6 +59,14 @@ public class CountEntry {
 
     public Long getId() {
         return id;
+    }
+
+    public InventorySession getInventorySession() {
+        return inventorySession;
+    }
+
+    public void setInventorySession(InventorySession inventorySession) {
+        this.inventorySession = inventorySession;
     }
 
     public Item getItem() {

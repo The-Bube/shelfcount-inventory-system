@@ -7,6 +7,7 @@ import com.shelfcount.backend.repository.CountEntryRepository;
 import com.shelfcount.backend.repository.ItemRepository;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -26,8 +27,8 @@ public class DashboardController {
         this.countEntryRepository = countEntryRepository;
     }
 
-    @GetMapping("/api/dashboard/summary")
-    public InventoryDashboardSummary getDashboardSummary() {
+    @GetMapping("/api/inventory-sessions/{sessionId}/dashboard/summary")
+    public InventoryDashboardSummary getDashboardSummary(@PathVariable Long sessionId) {
         List<Item> items = itemRepository.findAll();
 
         long matchedItems = 0;
@@ -37,7 +38,10 @@ public class DashboardController {
 
         for (Item item : items) {
             List<CountEntry> countEntries =
-                    countEntryRepository.findByItemIdOrderByCountedAtDesc(item.getId());
+                    countEntryRepository.findByInventorySessionIdAndItemIdOrderByCountedAtDesc(
+                            sessionId,
+                            item.getId()
+                    );
 
             int totalFound = countEntries.stream()
                     .mapToInt(CountEntry::getQuantityFound)

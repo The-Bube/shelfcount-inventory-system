@@ -6,6 +6,9 @@ import jakarta.validation.constraints.NotNull;
 public class CreateCountEntryRequest {
 
     @NotNull
+    private Long sessionId;
+
+    @NotNull
     private Long itemId;
 
     @NotNull
@@ -14,6 +17,14 @@ public class CreateCountEntryRequest {
     @NotNull
     @Min(0)
     private Integer quantityFound;
+
+    public Long getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(Long sessionId) {
+        this.sessionId = sessionId;
+    }
 
     public Long getItemId() {
         return itemId;
