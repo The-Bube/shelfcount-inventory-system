@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 
-const ACTIVE_SESSION_ID = 1;
-
 type HealthResponse = {
   status: string;
   message: string;
@@ -49,9 +47,15 @@ type DashboardSummary = {
   notCountedItems: number;
 };
 
+type InventorySession = {
+  id: number;
+  name: string;
+  status: string;
+  createdAt: string;
+};
+
 function App() {
-  const [backendStatus, setBackendStatus] =
-    useState<string>("Checking...");
+  const [backendStatus, setBackendStatus] = useState<string>("Checking...");
 
   const [backendMessage, setBackendMessage] = useState<string>(
     "Trying to connect to the backend."
@@ -65,16 +69,20 @@ function App() {
   );
 
   const [locations, setLocations] = useState<Location[]>([]);
+
+  const [sessions, setSessions] = useState<InventorySession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [newSessionName, setNewSessionName] = useState<string>("");
+  const [sessionMessage, setSessionMessage] = useState<string>(
+    "Select or create an inventory session."
+  );
+
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-
-  const [selectedLocationId, setSelectedLocationId] =
-    useState<string>("");
-
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [quantityFound, setQuantityFound] = useState<string>("");
   const [countEntries, setCountEntries] = useState<CountEntry[]>([]);
 
-  const [countSummary, setCountSummary] =
-    useState<CountSummary | null>(null);
+  const [countSummary, setCountSummary] = useState<CountSummary | null>(null);
 
   const [dashboardSummary, setDashboardSummary] =
     useState<DashboardSummary | null>(null);
@@ -82,12 +90,13 @@ function App() {
   const [countMessage, setCountMessage] = useState<string>(
     "Select an item to begin recording counts."
   );
+
   const [resetMessage, setResetMessage] = useState<string>("");
 
-  function loadDashboardSummary() {
+  function loadDashboardSummary(sessionId: number) {
     fetch(
-  `http://localhost:8080/api/inventory-sessions/${ACTIVE_SESSION_ID}/dashboard/summary`
-)
+      `http://localhost:8080/api/inventory-sessions/${sessionId}/dashboard/summary`
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load dashboard summary.");
@@ -100,6 +109,48 @@ function App() {
       })
       .catch(() => {
         setDashboardSummary(null);
+      });
+  }
+
+  function loadSessions() {
+    fetch("http://localhost:8080/api/inventory-sessions")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load inventory sessions.");
+        }
+
+        return response.json() as Promise<InventorySession[]>;
+      })
+      .then((data) => {
+        setSessions(data);
+
+        if (data.length === 0) {
+          setActiveSessionId(null);
+          setDashboardSummary(null);
+          setSessionMessage("No sessions found. Create a new inventory session.");
+          return;
+        }
+
+        setActiveSessionId((currentSessionId) => {
+          if (
+            currentSessionId &&
+            data.some((session) => session.id === currentSessionId)
+          ) {
+            loadDashboardSummary(currentSessionId);
+            return currentSessionId;
+          }
+
+          const newestSession = data[0];
+          loadDashboardSummary(newestSession.id);
+          setSessionMessage(`Active session: ${newestSession.name}`);
+          return newestSession.id;
+        });
+      })
+      .catch(() => {
+        setSessions([]);
+        setActiveSessionId(null);
+        setDashboardSummary(null);
+        setSessionMessage("Unable to load inventory sessions.");
       });
   }
 
@@ -138,11 +189,91 @@ function App() {
         setCountMessage("Unable to load store locations.");
       });
 
-    loadDashboardSummary();
+    loadSessions();
   }, []);
+
+  function handleCreateSession(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedName = newSessionName.trim();
+
+    if (!trimmedName) {
+      setSessionMessage("Enter a session name.");
+      return;
+    }
+
+    setSessionMessage("Creating inventory session...");
+
+    fetch("http://localhost:8080/api/inventory-sessions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: trimmedName }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to create session.");
+        }
+
+        return response.json() as Promise<InventorySession>;
+      })
+      .then((createdSession) => {
+        setNewSessionName("");
+        setActiveSessionId(createdSession.id);
+        setSessionMessage(`Active session: ${createdSession.name}`);
+        setSelectedItem(null);
+        setCountEntries([]);
+        setCountSummary(null);
+        setItems([]);
+        setQuery("");
+        setSearchMessage(
+          "Search by serial number, barcode, item name, or category."
+        );
+
+        loadSessions();
+        loadDashboardSummary(createdSession.id);
+      })
+      .catch(() => {
+        setSessionMessage("Unable to create inventory session.");
+      });
+  }
+
+  function handleSessionChange(sessionIdText: string) {
+    if (!sessionIdText) {
+      setActiveSessionId(null);
+      setDashboardSummary(null);
+      setSessionMessage("Select an inventory session.");
+      return;
+    }
+
+    const sessionId = Number(sessionIdText);
+    const selectedSession = sessions.find((session) => session.id === sessionId);
+
+    setActiveSessionId(sessionId);
+    setSelectedItem(null);
+    setCountEntries([]);
+    setCountSummary(null);
+    setItems([]);
+    setQuery("");
+    setSearchMessage("Search by serial number, barcode, item name, or category.");
+    setCountMessage("Select an item to begin recording counts.");
+    setResetMessage("");
+
+    if (selectedSession) {
+      setSessionMessage(`Active session: ${selectedSession.name}`);
+    }
+
+    loadDashboardSummary(sessionId);
+  }
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!activeSessionId) {
+      setSearchMessage("Select or create an inventory session before searching.");
+      return;
+    }
 
     const trimmedQuery = query.trim();
 
@@ -190,14 +321,19 @@ function App() {
   }
 
   function loadItemCountData(item: Item) {
+    if (!activeSessionId) {
+      setCountMessage("Select an inventory session before recording counts.");
+      return;
+    }
+
     setSelectedItem(item);
     setSelectedLocationId("");
     setQuantityFound("");
     setCountMessage(`Recording counts for ${item.name}.`);
 
     fetch(
-  `http://localhost:8080/api/inventory-sessions/${ACTIVE_SESSION_ID}/items/${item.id}/count-entries`
-)
+      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-entries`
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load count entries.");
@@ -213,8 +349,8 @@ function App() {
       });
 
     fetch(
-  `http://localhost:8080/api/inventory-sessions/${ACTIVE_SESSION_ID}/items/${item.id}/count-summary`
-)
+      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-summary`
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load count summary.");
@@ -232,6 +368,11 @@ function App() {
 
   function handleCountSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!activeSessionId) {
+      setCountMessage("Select an inventory session before saving counts.");
+      return;
+    }
 
     if (!selectedItem) {
       setCountMessage("Select an inventory item first.");
@@ -263,7 +404,7 @@ function App() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        sessionId: ACTIVE_SESSION_ID,
+        sessionId: activeSessionId,
         itemId: selectedItem.id,
         locationId: Number(selectedLocationId),
         quantityFound: parsedQuantity,
@@ -278,19 +419,26 @@ function App() {
       })
       .then(() => {
         const currentItem = selectedItem;
+        const currentSessionId = activeSessionId;
 
         setQuantityFound("");
         setSelectedLocationId("");
         setCountMessage("Count saved successfully.");
 
         loadItemCountData(currentItem);
-        loadDashboardSummary();
+        loadDashboardSummary(currentSessionId);
       })
       .catch(() => {
         setCountMessage("Unable to save the count.");
       });
   }
+
   function handleResetCounts() {
+    if (!activeSessionId) {
+      setResetMessage("Select an inventory session first.");
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to clear all saved count entries?"
     );
@@ -320,12 +468,16 @@ function App() {
         setCountMessage("Select an item to begin recording counts.");
         setResetMessage("All count entries were cleared successfully.");
 
-        loadDashboardSummary();
+        loadDashboardSummary(activeSessionId);
       })
       .catch(() => {
         setResetMessage("Unable to clear count entries.");
       });
   }
+
+  const activeSession = sessions.find(
+    (session) => session.id === activeSessionId
+  );
 
   return (
     <main className="app">
@@ -354,6 +506,47 @@ function App() {
             <p>{backendMessage}</p>
           </div>
         </div>
+
+        <section className="session-section">
+          <h2>Inventory Session</h2>
+
+          <div className="session-controls">
+            <label>
+              Active session
+              <select
+                value={activeSessionId ?? ""}
+                onChange={(event) => handleSessionChange(event.target.value)}
+              >
+                <option value="">Select a session</option>
+
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.name} - {session.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <form className="session-form" onSubmit={handleCreateSession}>
+              <input
+                type="text"
+                value={newSessionName}
+                placeholder="Example: Annual Inventory Count 2026"
+                onChange={(event) => setNewSessionName(event.target.value)}
+              />
+
+              <button type="submit">Create Session</button>
+            </form>
+          </div>
+
+          <p className="session-message">{sessionMessage}</p>
+
+          {activeSession && (
+            <p className="active-session-label">
+              Current session: <strong>{activeSession.name}</strong>
+            </p>
+          )}
+        </section>
 
         {dashboardSummary && (
           <section className="dashboard-section">
@@ -488,9 +681,7 @@ function App() {
                   min="0"
                   step="1"
                   value={quantityFound}
-                  onChange={(event) =>
-                    setQuantityFound(event.target.value)
-                  }
+                  onChange={(event) => setQuantityFound(event.target.value)}
                 />
               </label>
 
