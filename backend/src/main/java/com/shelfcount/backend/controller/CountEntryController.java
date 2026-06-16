@@ -1,5 +1,6 @@
 package com.shelfcount.backend.controller;
 
+import jakarta.transaction.Transactional;
 import com.shelfcount.backend.dto.CreateCountEntryRequest;
 import com.shelfcount.backend.dto.ItemCountSummary;
 import com.shelfcount.backend.model.CountEntry;
@@ -129,8 +130,9 @@ public class CountEntryController {
         );
     }
 
-    @DeleteMapping("/api/count-entries")
-    public void deleteAllCountEntries() {
-        countEntryRepository.deleteAll();
-    }
+   @Transactional
+   @DeleteMapping("/api/inventory-sessions/{sessionId}/count-entries")
+   public void deleteCountEntriesForSession(@PathVariable Long sessionId) {
+      countEntryRepository.deleteByInventorySessionId(sessionId);
+   }
 }

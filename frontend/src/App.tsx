@@ -449,9 +449,12 @@ function App() {
 
     setResetMessage("Clearing count entries...");
 
-    fetch("http://localhost:8080/api/count-entries", {
+    fetch(
+    `http://localhost:8080/api/inventory-sessions/${activeSessionId}/count-entries`,
+    {
       method: "DELETE",
-    })
+    }
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to clear count entries.");
@@ -466,7 +469,7 @@ function App() {
           "Search by serial number, barcode, item name, or category."
         );
         setCountMessage("Select an item to begin recording counts.");
-        setResetMessage("All count entries were cleared successfully.");
+        setResetMessage("Count entries for this session were cleared successfully.");
 
         loadDashboardSummary(activeSessionId);
       })
@@ -585,7 +588,7 @@ function App() {
                 className="reset-button"
                 onClick={handleResetCounts}
               >
-                Clear All Count Entries
+                Clear This Session's Counts
               </button>
 
               {resetMessage && <p>{resetMessage}</p>}
