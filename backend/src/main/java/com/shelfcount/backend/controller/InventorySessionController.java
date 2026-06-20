@@ -5,7 +5,6 @@ import com.shelfcount.backend.dto.UpdateInventorySessionStatusRequest;
 import com.shelfcount.backend.model.InventorySession;
 import com.shelfcount.backend.repository.InventorySessionRepository;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 public class InventorySessionController {
 
     private final InventorySessionRepository inventorySessionRepository;

@@ -1,6 +1,5 @@
 package com.shelfcount.backend.controller;
 
-import jakarta.transaction.Transactional;
 import com.shelfcount.backend.dto.CreateCountEntryRequest;
 import com.shelfcount.backend.dto.ItemCountSummary;
 import com.shelfcount.backend.model.CountEntry;
@@ -11,8 +10,8 @@ import com.shelfcount.backend.repository.CountEntryRepository;
 import com.shelfcount.backend.repository.InventorySessionRepository;
 import com.shelfcount.backend.repository.ItemRepository;
 import com.shelfcount.backend.repository.LocationRepository;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +23,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 public class CountEntryController {
 
     private final CountEntryRepository countEntryRepository;
@@ -130,9 +128,9 @@ public class CountEntryController {
         );
     }
 
-   @Transactional
-   @DeleteMapping("/api/inventory-sessions/{sessionId}/count-entries")
-   public void deleteCountEntriesForSession(@PathVariable Long sessionId) {
-      countEntryRepository.deleteByInventorySessionId(sessionId);
-   }
+    @Transactional
+    @DeleteMapping("/api/inventory-sessions/{sessionId}/count-entries")
+    public void deleteCountEntriesForSession(@PathVariable Long sessionId) {
+        countEntryRepository.deleteByInventorySessionId(sessionId);
+    }
 }
