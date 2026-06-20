@@ -136,13 +136,26 @@ function App() {
             currentSessionId &&
             data.some((session) => session.id === currentSessionId)
           ) {
+            const currentSession = data.find(
+              (session) => session.id === currentSessionId
+            );
+
             loadDashboardSummary(currentSessionId);
+
+            if (currentSession) {
+              setSessionMessage(
+                `Active session: ${currentSession.name} (${currentSession.status})`
+              );
+            }
+
             return currentSessionId;
           }
 
           const newestSession = data[0];
           loadDashboardSummary(newestSession.id);
-          setSessionMessage(`Active session: ${newestSession.name}`);
+          setSessionMessage(
+            `Active session: ${newestSession.name} (${newestSession.status})`
+          );
           return newestSession.id;
         });
       })
@@ -221,7 +234,9 @@ function App() {
       .then((createdSession) => {
         setNewSessionName("");
         setActiveSessionId(createdSession.id);
-        setSessionMessage(`Active session: ${createdSession.name}`);
+        setSessionMessage(
+          `Active session: ${createdSession.name} (${createdSession.status})`
+        );
         setSelectedItem(null);
         setCountEntries([]);
         setCountSummary(null);
@@ -261,10 +276,59 @@ function App() {
     setResetMessage("");
 
     if (selectedSession) {
-      setSessionMessage(`Active session: ${selectedSession.name}`);
+      setSessionMessage(
+        `Active session: ${selectedSession.name} (${selectedSession.status})`
+      );
     }
 
     loadDashboardSummary(sessionId);
+  }
+
+  function handleUpdateSessionStatus(newStatus: string) {
+    if (!activeSessionId) {
+      setSessionMessage("Select an inventory session first.");
+      return;
+    }
+
+    setSessionMessage(`Updating session status to ${newStatus}...`);
+
+    fetch(
+      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      }
+    )
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to update session status.");
+        }
+
+        return response.json() as Promise<InventorySession>;
+      })
+      .then((updatedSession) => {
+        setSessions((currentSessions) =>
+          currentSessions.map((session) =>
+            session.id === updatedSession.id ? updatedSession : session
+          )
+        );
+
+        setSessionMessage(
+          `Active session: ${updatedSession.name} (${updatedSession.status})`
+        );
+
+        setCountMessage(
+          updatedSession.status === "ACTIVE"
+            ? "Select an item to begin recording counts."
+            : "This session is locked. Reopen it before saving new counts."
+        );
+      })
+      .catch(() => {
+        setSessionMessage("Unable to update session status.");
+      });
   }
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -322,14 +386,14 @@ function App() {
 
   function loadItemCountData(item: Item) {
     if (!activeSessionId) {
-      setCountMessage("Select an inventory session before recording counts.");
+      setCountMessage("Select an inventory session before viewing counts.");
       return;
     }
 
     setSelectedItem(item);
     setSelectedLocationId("");
     setQuantityFound("");
-    setCountMessage(`Recording counts for ${item.name}.`);
+    setCountMessage(`Viewing counts for ${item.name}.`);
 
     fetch(
       `http://localhost:8080/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-entries`
@@ -369,8 +433,19 @@ function App() {
   function handleCountSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const activeSession = sessions.find(
+      (session) => session.id === activeSessionId
+    );
+
     if (!activeSessionId) {
       setCountMessage("Select an inventory session before saving counts.");
+      return;
+    }
+
+    if (activeSession?.status !== "ACTIVE") {
+      setCountMessage(
+        "This session is locked. Reopen it before saving new counts."
+      );
       return;
     }
 
@@ -434,13 +509,24 @@ function App() {
   }
 
   function handleResetCounts() {
+    const activeSession = sessions.find(
+      (session) => session.id === activeSessionId
+    );
+
     if (!activeSessionId) {
       setResetMessage("Select an inventory session first.");
       return;
     }
 
+    if (activeSession?.status !== "ACTIVE") {
+      setResetMessage(
+        "This session is locked. Reopen it before clearing counts."
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
-      "Are you sure you want to clear all saved count entries?"
+      "Are you sure you want to clear all count entries for the selected session?"
     );
 
     if (!confirmed) {
@@ -450,10 +536,10 @@ function App() {
     setResetMessage("Clearing count entries...");
 
     fetch(
-    `http://localhost:8080/api/inventory-sessions/${activeSessionId}/count-entries`,
-    {
-      method: "DELETE",
-    }
+      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/count-entries`,
+      {
+        method: "DELETE",
+      }
     )
       .then((response) => {
         if (!response.ok) {
@@ -482,6 +568,8 @@ function App() {
     (session) => session.id === activeSessionId
   );
 
+  const isActiveSessionEditable = activeSession?.status === "ACTIVE";
+
   return (
     <main className="app">
       <section className="hero-card">
@@ -491,8 +579,7 @@ function App() {
 
         <p className="description">
           Search items by serial number, record physical counts by location,
-          and compare total counted stock against the expected quantity on
-          hand.
+          and compare total counted stock against the expected quantity on hand.
         </p>
 
         <div className="status-card">
@@ -545,9 +632,44 @@ function App() {
           <p className="session-message">{sessionMessage}</p>
 
           {activeSession && (
-            <p className="active-session-label">
-              Current session: <strong>{activeSession.name}</strong>
-            </p>
+            <div className="active-session-panel">
+              <p className="active-session-label">
+                Current session: <strong>{activeSession.name}</strong>
+              </p>
+
+              <p className="active-session-label">
+                Status: <strong>{activeSession.status}</strong>
+              </p>
+
+              <div className="session-status-actions">
+                {activeSession.status !== "COMPLETED" && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateSessionStatus("COMPLETED")}
+                  >
+                    Mark Completed
+                  </button>
+                )}
+
+                {activeSession.status !== "ACTIVE" && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateSessionStatus("ACTIVE")}
+                  >
+                    Reopen Session
+                  </button>
+                )}
+
+                {activeSession.status !== "ARCHIVED" && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateSessionStatus("ARCHIVED")}
+                  >
+                    Archive Session
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </section>
 
@@ -587,8 +709,9 @@ function App() {
                 type="button"
                 className="reset-button"
                 onClick={handleResetCounts}
+                disabled={!isActiveSessionEditable}
               >
-                Clear This Session's Counts
+                Clear This Session&apos;s Counts
               </button>
 
               {resetMessage && <p>{resetMessage}</p>}
@@ -637,11 +760,8 @@ function App() {
                   </div>
                 </dl>
 
-                <button
-                  type="button"
-                  onClick={() => loadItemCountData(item)}
-                >
-                  Record Count
+                <button type="button" onClick={() => loadItemCountData(item)}>
+                  View / Record Count
                 </button>
               </article>
             ))}
@@ -658,11 +778,18 @@ function App() {
               Serial number: <strong>{selectedItem.serialNumber}</strong>
             </p>
 
+            {!isActiveSessionEditable && (
+              <p>
+                This session is locked. Reopen it before saving new counts.
+              </p>
+            )}
+
             <form className="count-form" onSubmit={handleCountSubmit}>
               <label>
                 Location
                 <select
                   value={selectedLocationId}
+                  disabled={!isActiveSessionEditable}
                   onChange={(event) =>
                     setSelectedLocationId(event.target.value)
                   }
@@ -684,11 +811,14 @@ function App() {
                   min="0"
                   step="1"
                   value={quantityFound}
+                  disabled={!isActiveSessionEditable}
                   onChange={(event) => setQuantityFound(event.target.value)}
                 />
               </label>
 
-              <button type="submit">Save Count</button>
+              <button type="submit" disabled={!isActiveSessionEditable}>
+                Save Count
+              </button>
             </form>
 
             <p>{countMessage}</p>
