@@ -1,11 +1,13 @@
 package com.shelfcount.backend.controller;
 
 import com.shelfcount.backend.dto.CreateInventorySessionRequest;
+import com.shelfcount.backend.dto.UpdateInventorySessionStatusRequest;
 import com.shelfcount.backend.model.InventorySession;
 import com.shelfcount.backend.repository.InventorySessionRepository;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,5 +52,30 @@ public class InventorySessionController {
                 .orElseThrow(() -> new RuntimeException(
                         "Inventory session not found"
                 ));
+    }
+
+    @PatchMapping("/api/inventory-sessions/{sessionId}/status")
+    public InventorySession updateSessionStatus(
+            @PathVariable Long sessionId,
+            @Valid @RequestBody UpdateInventorySessionStatusRequest request
+    ) {
+        InventorySession session = inventorySessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Inventory session not found"
+                ));
+
+        String newStatus = request.getStatus().trim().toUpperCase();
+
+        if (
+                !newStatus.equals("ACTIVE") &&
+                !newStatus.equals("COMPLETED") &&
+                !newStatus.equals("ARCHIVED")
+        ) {
+            throw new RuntimeException("Invalid inventory session status");
+        }
+
+        session.setStatus(newStatus);
+
+        return inventorySessionRepository.save(session);
     }
 }
