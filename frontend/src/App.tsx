@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+
 type HealthResponse = {
   status: string;
   message: string;
@@ -81,7 +83,6 @@ function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [quantityFound, setQuantityFound] = useState<string>("");
   const [countEntries, setCountEntries] = useState<CountEntry[]>([]);
-
   const [countSummary, setCountSummary] = useState<CountSummary | null>(null);
 
   const [dashboardSummary, setDashboardSummary] =
@@ -94,9 +95,7 @@ function App() {
   const [resetMessage, setResetMessage] = useState<string>("");
 
   function loadDashboardSummary(sessionId: number) {
-    fetch(
-      `http://localhost:8080/api/inventory-sessions/${sessionId}/dashboard/summary`
-    )
+    fetch(`${API_URL}/api/inventory-sessions/${sessionId}/dashboard/summary`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load dashboard summary.");
@@ -113,7 +112,7 @@ function App() {
   }
 
   function loadSessions() {
-    fetch("http://localhost:8080/api/inventory-sessions")
+    fetch(`${API_URL}/api/inventory-sessions`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load inventory sessions.");
@@ -152,10 +151,12 @@ function App() {
           }
 
           const newestSession = data[0];
+
           loadDashboardSummary(newestSession.id);
           setSessionMessage(
             `Active session: ${newestSession.name} (${newestSession.status})`
           );
+
           return newestSession.id;
         });
       })
@@ -168,7 +169,7 @@ function App() {
   }
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/health")
+    fetch(`${API_URL}/api/health`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Backend response was not successful.");
@@ -187,7 +188,7 @@ function App() {
         );
       });
 
-    fetch("http://localhost:8080/api/locations")
+    fetch(`${API_URL}/api/locations`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to load locations.");
@@ -217,7 +218,7 @@ function App() {
 
     setSessionMessage("Creating inventory session...");
 
-    fetch("http://localhost:8080/api/inventory-sessions", {
+    fetch(`${API_URL}/api/inventory-sessions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -292,16 +293,13 @@ function App() {
 
     setSessionMessage(`Updating session status to ${newStatus}...`);
 
-    fetch(
-      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      }
-    )
+    fetch(`${API_URL}/api/inventory-sessions/${activeSessionId}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: newStatus }),
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to update session status.");
@@ -344,18 +342,14 @@ function App() {
     if (!trimmedQuery) {
       setItems([]);
       setSelectedItem(null);
-      setSearchMessage(
-        "Enter a serial number, barcode, item name, or category."
-      );
+      setSearchMessage("Enter a serial number, barcode, item name, or category.");
       return;
     }
 
     setSearchMessage("Searching inventory...");
 
     fetch(
-      `http://localhost:8080/api/items/search?query=${encodeURIComponent(
-        trimmedQuery
-      )}`
+      `${API_URL}/api/items/search?query=${encodeURIComponent(trimmedQuery)}`
     )
       .then((response) => {
         if (!response.ok) {
@@ -396,7 +390,7 @@ function App() {
     setCountMessage(`Viewing counts for ${item.name}.`);
 
     fetch(
-      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-entries`
+      `${API_URL}/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-entries`
     )
       .then((response) => {
         if (!response.ok) {
@@ -413,7 +407,7 @@ function App() {
       });
 
     fetch(
-      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-summary`
+      `${API_URL}/api/inventory-sessions/${activeSessionId}/items/${item.id}/count-summary`
     )
       .then((response) => {
         if (!response.ok) {
@@ -473,7 +467,7 @@ function App() {
 
     setCountMessage("Saving count...");
 
-    fetch("http://localhost:8080/api/count-entries", {
+    fetch(`${API_URL}/api/count-entries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -535,12 +529,9 @@ function App() {
 
     setResetMessage("Clearing count entries...");
 
-    fetch(
-      `http://localhost:8080/api/inventory-sessions/${activeSessionId}/count-entries`,
-      {
-        method: "DELETE",
-      }
-    )
+    fetch(`${API_URL}/api/inventory-sessions/${activeSessionId}/count-entries`, {
+      method: "DELETE",
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error("Unable to clear count entries.");
